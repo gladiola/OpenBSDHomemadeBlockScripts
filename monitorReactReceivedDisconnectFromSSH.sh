@@ -15,6 +15,9 @@ mkdir -p "${DIRNAME}"
 ## Be able to interact with a file that holds blocks for the firewall
 BLOCKFILE='/etc/pf/blocks/arbitraryBlocks.txt'
 
+## Ledger that records when each IP was blocked (used by expireBlocks.sh)
+LEDGER='/etc/pf/blocks/blockLedger.txt'
+
 ## I.  Read /var/log/authlog and look for disconnects and store their IPs in a file.
 ##     On OpenBSD, sshd writes authentication events to /var/log/authlog.
 touch "${DIRNAME}/ip.txt"
@@ -29,8 +32,9 @@ SCORE=0
 
 while IFS= read -r ip; do
     if ! grep -q "$ip" "$BLOCKFILE"; then
-        # Append the IP to the block file
+        # Append the IP to the block file and record the block timestamp in the ledger
         echo "${ip}" >> "$BLOCKFILE"
+        echo "${ip} $(date +%s)" >> "$LEDGER"
         SCORE=$((SCORE + 1))
         # Log the newly blocked attacker to the remote syslog server
         logger -n "$SYSLOG_HOST" -P "$SYSLOG_PORT" -p auth.warning \
